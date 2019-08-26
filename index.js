@@ -18,11 +18,8 @@ const nodeOps = {
   insertBefore() {}
 };
 
-// 如何测试呢？我会把这个方法置换源代码重的方法，一些工具函数如createKeyToOldIdx，我会把它声明在函数的的作用于内，既保证函数执行的逻辑，又不影响其他人引用
-// 先写出来，再搞清楚为什么要采用这种方式
-// 假设这是vnode 先不考虑空节点
+// 如何测试呢？我会把这个方法置换源代码的updateChildren方法，一些工具函数如createKeyToOldIdx，我会把它声明在函数的的作用域内，既保证函数执行的逻辑，又不影响其他人引用
 // 暂不考虑transition
-// 暂不考虑服务端渲染
 // 以老节点为基准
 // eslint-disable-next-line no-unused-vars
 function updateChildren(parentElm, oldList, newList) {
@@ -154,4 +151,34 @@ function updateChildren(parentElm, oldList, newList) {
     // 还有一种全部都走else的情况
     removeVnodes(parentElm, oldList, oldStartIdx, oldEndIdx);
   }
+}
+
+if (sameVnode(oldStartVnode, newStartVnode)) {
+  patchVnode(oldStartVnode, newStartVnode);
+  newStartVnode = newList[++newStartIdx];
+  oldStartVnode = oldList[++oldStartIdx];
+  // 老末 == 新末 不用移动直接更新
+} else if (sameVnode(oldEndVnode, newEndVnode)) {
+  patchVnode(oldEndVnode, newEndVnode);
+  newEndVnode = newList[--newEndIdx];
+  oldEndVnode = oldList[--oldEndIdx];
+  // 老首 == 新末
+} else if (sameVnode(oldStartVnode, newEndVnode)) {
+  // 先执行节点属性更新
+  patchVnode(oldStartVnode, newEndVnode);
+  nodeOps.insertBefore(
+    parentElm,
+    oldStartVnode.elm,
+    nodeOps.nextSibling(oldEndVnode.elm)
+  );
+  // 这里要移动下标
+  oldStartVnode = oldList[++oldStartIdx];
+  newEndVnode = newList[--newEndIdx];
+  // 老末 == 新首
+} else if (sameVnode(oldEndVnode, newStartVnode)) {
+  patchVnode(oldEndVnode, newStartVnode);
+  // 把老末移动到oldStartIndex
+  nodeOps.insertBefore(parentElm, oldEndVnode.elm, oldStartVnode.elm);
+  oldEndVnode = oldList[--oldEndIdx];
+  newStartVnode = newList[++newStartIdx];
 }

@@ -78,7 +78,7 @@ newStartVnode = newList[++newStartIdx];
 
 #### 循环体的设计
 
-循环直至`a/b`或`A/b`相交
+循环直至`a/b`或`A/B`相交
 
 ```javascript
 while (newStartIdx <= newEndIdx && oldStartIdx <= oldEndIdx) {}

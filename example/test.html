@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="app">
+      <div v-for="item in list2" :key="item.id">{{ item.value }}</div>
+      <button @click="onClick">测试</button>
+    </div>
+    <script src="./lodash.min.js"></script>
+    <script src="./vue.js"></script>
+    <script>
+      const vm = new Vue({
+        el: '#app',
+        data() {
+          const list = [
+            {
+              id: '1',
+              key: Symbol(1),
+              value: 'foo'
+            },
+            {
+              id: '2',
+              key: Symbol(2),
+              value: 'bar'
+            },
+            {
+              id: '3',
+              key: Symbol(3),
+              value: 'mua3'
+            },
+            {
+              id: '4',
+              key: Symbol(4),
+              value: 'mua4'
+            },
+            {
+              id: '5',
+              key: Symbol(5),
+              value: 'mua5'
+            }
+          ];
+          return {
+            list,
+            list2: [
+              {
+                id: '5',
+                key: Symbol(5),
+                value: 'mua5'
+              },
+              {
+                id: '4',
+                key: Symbol(4),
+                value: 'mua4'
+              },
+              {
+                id: '2',
+                key: Symbol(2),
+                value: 'bar'
+              },
+              {
+                id: '3',
+                key: Symbol(3),
+                value: 'mua3'
+              },
+              {
+                id: '1',
+                key: Symbol(1),
+                value: 'foo'
+              }
+            ],
+            list3: [
+              {
+                id: '1',
+                key: Symbol(1),
+                value: 'foo'
+              },
+              {
+                id: '4',
+                key: Symbol(4),
+                value: 'mua4'
+              },
+              {
+                id: '3',
+                key: Symbol(3),
+                value: 'mua3'
+              },
+              {
+                id: '5',
+                key: Symbol(5),
+                value: 'mua5'
+              },
+              {
+                id: '2',
+                key: Symbol(2),
+                value: 'bar'
+              }
+            ],
+            list4: [
+              {
+                id: '5',
+                key: Symbol(5),
+                value: 'mua5'
+              },
+              {
+                id: '4',
+                key: Symbol(4),
+                value: 'mua4'
+              },
+              {
+                id: '22',
+                key: Symbol(22),
+                value: 'bar22'
+              },
+              {
+                id: '33',
+                key: Symbol(33),
+                value: 'mua33'
+              },
+              {
+                id: '11',
+                key: Symbol(11),
+                value: 'foo11'
+              },
+              {
+                id: '2',
+                key: Symbol(2),
+                value: 'bar'
+              },
+              {
+                id: '3',
+                key: Symbol(3),
+                value: 'mua3'
+              },
+              {
+                id: '1',
+                key: Symbol(1),
+                value: 'foo'
+              }
+            ]
+          };
+        },
+        methods: {
+          onClick() {
+            // this.list = _.shuffle(this.list);
+            this.list2 = this.list3;
+          }
+        }
+      });
+    </script>
+  </body>
+</html>

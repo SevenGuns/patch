@@ -8,7 +8,7 @@
   </head>
   <body>
     <div id="app">
-      <div v-for="item in list2" :key="item.id">{{ item.value }}</div>
+      <div v-for="item in list" :key="item.id">{{ item.value }}</div>
       <button @click="onClick">测试</button>
     </div>
     <script src="./lodash.min.js"></script>
@@ -17,137 +17,68 @@
       const vm = new Vue({
         el: '#app',
         data() {
-          const list = [
-            {
-              id: '1',
-              key: Symbol(1),
-              value: 'foo'
-            },
-            {
-              id: '2',
-              key: Symbol(2),
-              value: 'bar'
-            },
-            {
-              id: '3',
-              key: Symbol(3),
-              value: 'mua3'
-            },
-            {
-              id: '4',
-              key: Symbol(4),
-              value: 'mua4'
-            },
-            {
-              id: '5',
-              key: Symbol(5),
-              value: 'mua5'
-            }
-          ];
           return {
-            list,
+            list: [
+              {
+                id: '1',
+                key: 1,
+                value: 't1'
+              },
+              {
+                id: '2',
+                key: 2,
+                value: 't2'
+              },
+              {
+                id: '3',
+                key: 3,
+                value: 't3'
+              },
+              {
+                id: '4',
+                key: 4,
+                value: 't4'
+              },
+              {
+                id: '5',
+                key: 5,
+                value: 't5'
+              }
+            ],
             list2: [
               {
                 id: '5',
-                key: Symbol(5),
-                value: 'mua5'
-              },
-              {
-                id: '4',
-                key: Symbol(4),
-                value: 'mua4'
+                key: 5,
+                value: 't5'
               },
               {
                 id: '2',
-                key: Symbol(2),
-                value: 'bar'
-              },
-              {
-                id: '3',
-                key: Symbol(3),
-                value: 'mua3'
-              },
-              {
-                id: '1',
-                key: Symbol(1),
-                value: 'foo'
-              }
-            ],
-            list3: [
-              {
-                id: '1',
-                key: Symbol(1),
-                value: 'foo'
+                key: 2,
+                value: 't2'
               },
               {
                 id: '4',
-                key: Symbol(4),
-                value: 'mua4'
-              },
-              {
-                id: '3',
-                key: Symbol(3),
-                value: 'mua3'
-              },
-              {
-                id: '5',
-                key: Symbol(5),
-                value: 'mua5'
-              },
-              {
-                id: '2',
-                key: Symbol(2),
-                value: 'bar'
-              }
-            ],
-            list4: [
-              {
-                id: '5',
-                key: Symbol(5),
-                value: 'mua5'
-              },
-              {
-                id: '4',
-                key: Symbol(4),
-                value: 'mua4'
-              },
-              {
-                id: '22',
-                key: Symbol(22),
-                value: 'bar22'
-              },
-              {
-                id: '33',
-                key: Symbol(33),
-                value: 'mua33'
-              },
-              {
-                id: '11',
-                key: Symbol(11),
-                value: 'foo11'
-              },
-              {
-                id: '2',
-                key: Symbol(2),
-                value: 'bar'
-              },
-              {
-                id: '3',
-                key: Symbol(3),
-                value: 'mua3'
+                key: 4,
+                value: 't4'
               },
               {
                 id: '1',
-                key: Symbol(1),
-                value: 'foo'
+                key: 1,
+                value: 't1'
+              },
+              {
+                id: '3',
+                key: 3,
+                value: 't3'
               }
             ]
           };
         },
         methods: {
           onClick() {
-            // this.list = _.shuffle(this.list);
-            this.list2 = this.list3;
+            this.list = _.shuffle(this.list);
+            // 可以用于测试一些特殊情况 调试用
+            // this.list = this.list2;
           }
         }
       });

@@ -5241,6 +5241,9 @@ var emptyNode = new VNode('', {}, []);
 var hooks = ['create', 'activate', 'update', 'remove', 'destroy'];
 
 function sameVnode (a, b) {
+  if (!b || !a) {
+    debugger
+  }
   return (
     a.key === b.key && (
       (
@@ -5561,7 +5564,17 @@ function createPatchFunction (backend) {
 // 暂不考虑transition
 // 暂不考虑服务端渲染
 // 以老节点为基准
+// eslint-disable-next-line no-unused-vars
   function updateChildren (parentElm, oldList, newList) {
+    function log (list) {
+      console.log(list.map(function (ref$$1) {
+        var key = ref$$1.key;
+
+        return key;
+      }));
+    }
+    log(oldList);
+    log(newList);
   // 先假设节点数组都有key且key不重复
   // 生成key的下标
   // { key1: 1, key2: 3, key3: 4}
@@ -5570,12 +5583,19 @@ function createPatchFunction (backend) {
       for (var i = oldStart; i <= oldEnd; i++) {
         var ref$$1 = oldList[i];
         var key = ref$$1.key;
-        map[key] = i;
+        if (isDef(key)) { map[key] = i; }
       }
       return map
     }
+    // 处理节点没有key的情况 没有key直接遍历比较 返回下标 此时时间复杂度变为O(n^2)
+    function findIdxInOld (vnode, list, beginIdx, endIdx) {
+      for (var i = beginIdx; i < endIdx; i++) {
+        var c = list[i];
+        if (isDef(c) && sameVnode(vnode, c)) { return i }
+      }
+    }
 
-    var lastIndex = function (arr) { return (arr.length ? arr.length - 1 : 0); };
+    var lastIndex = function (arr) { return arr.length - 1; };
     var ref$$1 = [0, lastIndex(oldList)];
     var oldStartIdx = ref$$1[0];
     var oldEndIdx = ref$$1[1];
@@ -5584,54 +5604,50 @@ function createPatchFunction (backend) {
     var newEndIdx = ref$1[1];
   // 两两交叉比较
     var ref$2 = [newList[newStartIdx], newList[newEndIdx]];
-    var newStartVNode = ref$2[0];
-    var newEndVNode = ref$2[1];
+    var newStartVnode = ref$2[0];
+    var newEndVnode = ref$2[1];
     var ref$3 = [oldList[oldStartIdx], oldList[oldEndIdx]];
-    var oldStartVNode = ref$3[0];
-    var oldEndVNode = ref$3[1];
+    var oldStartVnode = ref$3[0];
+    var oldEndVnode = ref$3[1];
   // 生成老节点 key和下标的映射
     var oldKeyToIdx;
   // 循环至其中一个数组遍历完成
     while (newStartIdx <= newEndIdx && oldStartIdx <= oldEndIdx) {
     // 处理一些异常 老首或老末不存在 则继续循环
-      if (isUndef(oldStartVNode)) {
-        oldStartVNode = oldList[++oldStartIdx];
-      } else if (isUndef(oldEndVNode)) {
-        oldEndVNode = oldList[--oldEndIdx];
-      }
-    // 老首 == 新首 不用移动直接更新
-      else if (sameVnode(oldStartVNode, newStartVNode)) {
-        patchVnode(oldStartVNode, newStartVNode);
-        newStartVNode = newList[++newStartIdx];
-        oldStartVNode = oldList[++oldStartIdx];
+      if (isUndef(oldStartVnode)) {
+        oldStartVnode = oldList[++oldStartIdx];
+      } else if (isUndef(oldEndVnode)) {
+        oldEndVnode = oldList[--oldEndIdx];
+        // 老首 == 新首 不用移动直接更新
+      } else if (sameVnode(oldStartVnode, newStartVnode)) {
+        patchVnode(oldStartVnode, newStartVnode);
+        newStartVnode = newList[++newStartIdx];
+        oldStartVnode = oldList[++oldStartIdx];
       // 老末 == 新末 不用移动直接更新
-      } else if (sameVnode(oldEndVNode, newEndVNode)) {
-        patchVnode(oldEndVNode, newEndVNode);
-        newEndVNode = newList[--newEndIdx];
-        oldEndVNode = oldList[--oldEndIdx];
+      } else if (sameVnode(oldEndVnode, newEndVnode)) {
+        patchVnode(oldEndVnode, newEndVnode);
+        newEndVnode = newList[--newEndIdx];
+        oldEndVnode = oldList[--oldEndIdx];
       // 老首 == 新末
-      } else if (sameVnode(oldStartVNode, newEndVNode)) {
+      } else if (sameVnode(oldStartVnode, newEndVnode)) {
       // 先执行节点属性更新
-        patchVnode(oldEndVNode, newStartVNode);
-      // 注意：insertBefore、appendChild都是节点移动操作
-      // 把老首移动到oldEndIdx位置;
-      // insert之后没有改变下标
-      // 没有操作vdom
-        parentElm.insertBefore(
-        parentElm,
-        oldStartVNode.elm,
-        oldEndVNode.elm.nextSibling
-      );
+        patchVnode(oldStartVnode, newEndVnode);
+        // 注意：insertBefore、appendChild都是节点移动操作
+        // 把老首移动到oldEndIdx位置;
+        // insert之后没有改变下标
+        // 没有操作vdom
+        // 这里对节点插入操作做了一些封装，1. 同构，要保证两端运行。 2. 简化API，末尾插入使用的其实是appendChild
+        nodeOps.insertBefore(parentElm, oldStartVnode.elm, nodeOps.nextSibling(oldEndVnode.elm));
       // 这里要移动下标
-        oldStartVNode = oldList[++oldStartIdx];
-        newEndVNode = newList[--newEndVNode];
+        oldStartVnode = oldList[++oldStartIdx];
+        newEndVnode = newList[--newEndIdx];
       // 老末 == 新首
-      } else if (sameVnode(oldEndVNode, newStartVNode)) {
-        patchVnode(oldEndVNode, newStartVNode);
+      } else if (sameVnode(oldEndVnode, newStartVnode)) {
+        patchVnode(oldEndVnode, newStartVnode);
       // 把老末移动到oldStartIndex
-        parentElm.insertBefore(oldEndVNode.elm, oldStartVNode.elm);
-        oldEndVNode = oldList[--oldEndIdx];
-        newStartVNode = newList[++newStartIdx];
+        nodeOps.insertBefore(parentElm, oldEndVnode.elm, oldStartVnode.elm);
+        oldEndVnode = oldList[--oldEndIdx];
+        newStartVnode = newList[++newStartIdx];
 
       // 以上所有情况其实都是对常规场景的优化，就是比如节点增删，时间复杂度都是O(n)
       // 对于节点交换位置，可能会触发以下算法，就是常规的队列比较移动算法，如果有key时间复杂度也是O(n)，但能做到差异最小化
@@ -5639,34 +5655,35 @@ function createPatchFunction (backend) {
       // 利用了队列的唯一key
       } else {
       // 映射只生成一次
-        if (isUndef(oldKeyToIdx)) {
-          oldKeyToIdx = createKeyToOldIdx(oldList, oldStartIdx, oldEndIdx);
-        }
+        if (isUndef(oldKeyToIdx)) { oldKeyToIdx = createKeyToOldIdx(oldList, oldStartIdx, oldEndIdx); }
       // 这里假设子节点都有唯一key
-        var idxInOld = oldKeyToIdx[newStartVNode.key];
+        var idxInOld = isDef(newStartVnode.key)
+          ? oldKeyToIdx[newStartVnode.key]
+          : findIdxInOld(newStartVnode, oldList, oldStartIdx, oldEndIdx);
         if (isUndef(idxInOld)) {
-        // 如果新首在老节点中不存在 进行新增并插入操作
-        // 这里我简化了 写一个框架真的很不容易 要考虑很多极限情况
-          parentElm.insertBefore(oldStartVNode.elm, newStartVNode.elm);
+          // 如果新首在老节点中不存在 进行新增并插入操作
+          // 插入并新增节点
+          createElm(newStartVnode, [], parentElm, oldStartVnode.elm);
         } else {
         // 否则就是更新操作
         // 找到需要更新的节点
           var vnodeToMove = oldList[idxInOld];
         // 保险起见这里还需要比较一次，防止出现key相同，但节点类型不同情况
-          if (sameVnode(vnodeToMove, newStartVNode)) {
+          if (sameVnode(vnodeToMove, newStartVnode)) {
           // 老规矩先执行属性更新
-            patchVnode(vnodeToMove, newStartVNode);
-          // 这一步很关键 因为节点已经被移动了 置空可以在下次循环时过滤掉 在上面
+            patchVnode(vnodeToMove, newStartVnode);
+            // 这一步很关键 因为节点已经被移动了 置空可以在下次循环时过滤掉 在上面
             oldList[idxInOld] = undefined;
-          // 再次强调：insertBefore是移动操作
-            parentElm.insertBefore(vnodeToMove.elm, newStartVNode.elm);
+            // 再次强调：insertBefore是移动操作
+            nodeOps.insertBefore(parentElm, vnodeToMove.elm, oldStartVnode.elm);
           } else {
-          // 如果节点key相同 但类型不同 那么相当于插入了新节点
-            parentElm.insertBefore(oldStartVNode.elm, newStartVNode.elm);
+            // 如果节点key相同 但类型不同 那么相当于插入了新节点
+            // 插入并新增节点
+            createElm(newStartVnode, [], parentElm, oldStartVnode.elm);
           }
         }
       // while(i) {++i} 循环结束时i+=1
-        newStartVNode = newList[++newStartIdx];
+        newStartVnode = newList[++newStartIdx];
       }
     }
   // 循环结束时可能出现三种情况: 1. 老节点未遍历完 2. 新节点未遍历完. 3. 全部节点都遍历完成
@@ -5675,8 +5692,8 @@ function createPatchFunction (backend) {
     // 老节点遍历完成 新节点可能还未遍历完成 未完成的直接批量插入到oldStartIdx和oldEndIdx交错的位置
     // 最典型的场景就是中间连续节点新增的情况
       var refElm = isUndef(newList[newEndIdx + 1])
-      ? null
-      : newList[newEndIdx + 1].elm;
+        ? null
+        : newList[newEndIdx + 1].elm;
     // 这个函数细细一想里面应该涉及到一个VDom的操作 与differ本身无关 所以就直接复用了
       addVnodes(parentElm, refElm, newList, newStartIdx, newEndIdx, []);
     } else if (newStartIdx > newEndIdx) {
@@ -5686,82 +5703,8 @@ function createPatchFunction (backend) {
       removeVnodes(parentElm, oldList, oldStartIdx, oldEndIdx);
     }
   }
-
-  // function updateChildren (parentElm, oldCh, newCh, insertedVnodeQueue, removeOnly) {
-  //   let oldStartIdx = 0
-  //   let newStartIdx = 0
-  //   let oldEndIdx = oldCh.length - 1
-  //   let oldStartVnode = oldCh[0]
-  //   let oldEndVnode = oldCh[oldEndIdx]
-  //   let newEndIdx = newCh.length - 1
-  //   let newStartVnode = newCh[0]
-  //   let newEndVnode = newCh[newEndIdx]
-  //   let oldKeyToIdx, idxInOld, vnodeToMove, refElm
-
-  //   // removeOnly is a special flag used only by <transition-group>
-  //   // to ensure removed elements stay in correct relative positions
-  //   // during leaving transitions
-  //   const canMove = !removeOnly
-
-  //   while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
-  //     if (isUndef(oldStartVnode)) {
-  //       oldStartVnode = oldCh[++oldStartIdx] // Vnode has been moved left
-  //     } else if (isUndef(oldEndVnode)) {
-  //       oldEndVnode = oldCh[--oldEndIdx]
-  //     } else if (sameVnode(oldStartVnode, newStartVnode)) {
-  //       patchVnode(oldStartVnode, newStartVnode, insertedVnodeQueue)
-  //       oldStartVnode = oldCh[++oldStartIdx]
-  //       newStartVnode = newCh[++newStartIdx]
-  //     } else if (sameVnode(oldEndVnode, newEndVnode)) {
-  //       patchVnode(oldEndVnode, newEndVnode, insertedVnodeQueue)
-  //       oldEndVnode = oldCh[--oldEndIdx]
-  //       newEndVnode = newCh[--newEndIdx]
-  //     } else if (sameVnode(oldStartVnode, newEndVnode)) { // Vnode moved right
-  //       patchVnode(oldStartVnode, newEndVnode, insertedVnodeQueue)
-  //       canMove && nodeOps.insertBefore(parentElm, oldStartVnode.elm, nodeOps.nextSibling(oldEndVnode.elm))
-  //       oldStartVnode = oldCh[++oldStartIdx]
-  //       newEndVnode = newCh[--newEndIdx]
-  //     } else if (sameVnode(oldEndVnode, newStartVnode)) { // Vnode moved left
-  //       patchVnode(oldEndVnode, newStartVnode, insertedVnodeQueue)
-  //       canMove && nodeOps.insertBefore(parentElm, oldEndVnode.elm, oldStartVnode.elm)
-  //       oldEndVnode = oldCh[--oldEndIdx]
-  //       newStartVnode = newCh[++newStartIdx]
-  //     } else {
-  //       if (isUndef(oldKeyToIdx)) oldKeyToIdx = createKeyToOldIdx(oldCh, oldStartIdx, oldEndIdx)
-  //       idxInOld = isDef(newStartVnode.key)
-  //         ? oldKeyToIdx[newStartVnode.key]
-  //         : findIdxInOld(newStartVnode, oldCh, oldStartIdx, oldEndIdx)
-  //       if (isUndef(idxInOld)) { // New element
-  //         createElm(newStartVnode, insertedVnodeQueue, parentElm, oldStartVnode.elm)
-  //       } else {
-  //         vnodeToMove = oldCh[idxInOld]
-  //         /* istanbul ignore if */
-  //         if ("development" !== 'production' && !vnodeToMove) {
-  //           warn(
-  //             'It seems there are duplicate keys that is causing an update error. ' +
-  //             'Make sure each v-for item has a unique key.'
-  //           )
-  //         }
-  //         if (sameVnode(vnodeToMove, newStartVnode)) {
-  //           patchVnode(vnodeToMove, newStartVnode, insertedVnodeQueue)
-  //           oldCh[idxInOld] = undefined
-  //           canMove && nodeOps.insertBefore(parentElm, vnodeToMove.elm, oldStartVnode.elm)
-  //         } else {
-  //           // same key but different element. treat as new element
-  //           createElm(newStartVnode, insertedVnodeQueue, parentElm, oldStartVnode.elm)
-  //         }
-  //       }
-  //       newStartVnode = newCh[++newStartIdx]
-  //     }
-  //   }
-  //   if (oldStartIdx > oldEndIdx) {
-  //     refElm = isUndef(newCh[newEndIdx + 1]) ? null : newCh[newEndIdx + 1].elm
-  //     addVnodes(parentElm, refElm, newCh, newStartIdx, newEndIdx, insertedVnodeQueue)
-  //   } else if (newStartIdx > newEndIdx) {
-  //     removeVnodes(parentElm, oldCh, oldStartIdx, oldEndIdx)
-  //   }
-  // }
-
+  // TODO: 源代码
+  // eslint-disable-next-line no-unused-vars
   function patchVnode (oldVnode, vnode, insertedVnodeQueue, removeOnly) {
     if (oldVnode === vnode) {
       return

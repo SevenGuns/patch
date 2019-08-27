@@ -68,7 +68,7 @@ nodeOps.insertBefore(parentElm, vnodeToMove.elm, oldStartVnode.elm);
 createElm(newStartVnode, [], parentElm, oldStartVnode.elm);
 ```
 
-此时操作只需移动`A`
+只需移动`A`的下标
 
 ```javascript
 newStartVnode = newList[++newStartIdx];

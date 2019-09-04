@@ -610,7 +610,6 @@ function logError (err, vm, info) {
 /*  */
 /* globals MessageChannel */
 
-// can we use __proto__?
 var hasProto = '__proto__' in {};
 
 // Browser environment sniffing
@@ -812,9 +811,6 @@ Dep.prototype.notify = function notify () {
   }
 };
 
-// the current target watcher being evaluated.
-// this is globally unique because there could be only one
-// watcher being evaluated at any time.
 Dep.target = null;
 var targetStack = [];
 
@@ -1204,11 +1200,6 @@ function dependArray (value) {
 
 /*  */
 
-/**
- * Option overwriting strategies are functions that handle
- * how to merge a parent option value and a child option
- * value into the final value.
- */
 var strats = config.optionMergeStrategies;
 
 /**
@@ -2053,18 +2044,6 @@ function checkProp (
 
 /*  */
 
-// The template compiler attempts to minimize the need for normalization by
-// statically analyzing the template at compile time.
-//
-// For plain HTML markup, normalization can be completely skipped because the
-// generated render function is guaranteed to return Array<VNode>. There are
-// two cases where extra normalization is needed:
-
-// 1. When the children contains components - because a functional component
-// may return an Array instead of a single root. In this case, just a simple
-// normalization is needed - if any child is an Array, we flatten the whole
-// thing with Array.prototype.concat. It is guaranteed to be only 1-level deep
-// because functional components already normalize their own children.
 function simpleNormalizeChildren (children) {
   for (var i = 0; i < children.length; i++) {
     if (Array.isArray(children[i])) {
@@ -3143,11 +3122,6 @@ Watcher.prototype.teardown = function teardown () {
   }
 };
 
-/**
- * Recursively traverse an object to evoke all converted
- * getters, so that every nested property inside the object
- * is collected as a "deep" dependency.
- */
 var seenObjects = new _Set();
 function traverse (val) {
   seenObjects.clear();
@@ -3574,9 +3548,6 @@ function resolveInject (inject, vm) {
 
 /*  */
 
-/**
- * Runtime helper for rendering v-for lists.
- */
 function renderList (
   val,
   render
@@ -3608,9 +3579,6 @@ function renderList (
 
 /*  */
 
-/**
- * Runtime helper for rendering <slot>
- */
 function renderSlot (
   name,
   fallback,
@@ -3647,20 +3615,12 @@ function renderSlot (
 
 /*  */
 
-/**
- * Runtime helper for resolving filters
- */
 function resolveFilter (id) {
   return resolveAsset(this.$options, 'filters', id, true) || identity
 }
 
 /*  */
 
-/**
- * Runtime helper for checking keyCodes from config.
- * exposed as Vue.prototype._k
- * passing in eventKeyName as last argument separately for backwards compat
- */
 function checkKeyCodes (
   eventKeyCode,
   key,
@@ -3681,9 +3641,6 @@ function checkKeyCodes (
 
 /*  */
 
-/**
- * Runtime helper for merging v-bind="object" into a VNode's data.
- */
 function bindObjectProps (
   data,
   tag,
@@ -3735,9 +3692,6 @@ function bindObjectProps (
 
 /*  */
 
-/**
- * Runtime helper for rendering static trees.
- */
 function renderStatic (
   index,
   isInFor
@@ -3933,7 +3887,6 @@ function mergeProps (to, from) {
 
 /*  */
 
-// hooks to be invoked on component VNodes during patch
 var componentVNodeHooks = {
   init: function init (
     vnode,
@@ -4890,8 +4843,6 @@ Vue$3.version = '2.5.0';
 
 /*  */
 
-// these are reserved for web because they are directly compiled away
-// during template compilation
 var isReservedAttr = makeMap('style,class');
 
 // attributes that should be using props for binding
@@ -5088,9 +5039,6 @@ var isTextInputType = makeMap('text,number,password,search,email,tel,url');
 
 /*  */
 
-/**
- * Query an element selector if it's not an element already.
- */
 function query (el) {
   if (typeof el === 'string') {
     var selected = document.querySelector(el);
@@ -5241,9 +5189,6 @@ var emptyNode = new VNode('', {}, []);
 var hooks = ['create', 'activate', 'update', 'remove', 'destroy'];
 
 function sameVnode (a, b) {
-  if (!b || !a) {
-    debugger
-  }
   return (
     a.key === b.key && (
       (
@@ -5266,6 +5211,16 @@ function sameInputType (a, b) {
   var typeA = isDef(i = a.data) && isDef(i = i.attrs) && i.type;
   var typeB = isDef(i = b.data) && isDef(i = i.attrs) && i.type;
   return typeA === typeB || isTextInputType(typeA) && isTextInputType(typeB)
+}
+
+function createKeyToOldIdx (children, beginIdx, endIdx) {
+  var i, key;
+  var map = {};
+  for (i = beginIdx; i <= endIdx; ++i) {
+    key = children[i].key;
+    if (isDef(key)) { map[key] = i; }
+  }
+  return map
 }
 
 function createPatchFunction (backend) {
@@ -5565,146 +5520,87 @@ function createPatchFunction (backend) {
 // 暂不考虑服务端渲染
 // 以老节点为基准
 // eslint-disable-next-line no-unused-vars
-  function updateChildren (parentElm, oldList, newList) {
-    function log (list) {
-      console.log(list.map(function (ref$$1) {
-        var key = ref$$1.key;
+  function updateChildren (parentElm, oldCh, newCh, insertedVnodeQueue, removeOnly) {
+    var oldStartIdx = 0;
+    var newStartIdx = 0;
+    var oldEndIdx = oldCh.length - 1;
+    var oldStartVnode = oldCh[0];
+    var oldEndVnode = oldCh[oldEndIdx];
+    var newEndIdx = newCh.length - 1;
+    var newStartVnode = newCh[0];
+    var newEndVnode = newCh[newEndIdx];
+    var oldKeyToIdx, idxInOld, vnodeToMove, refElm;
+    // removeOnly is a special flag used only by <transition-group>
+    // to ensure removed elements stay in correct relative positions
+    // during leaving transitions
+    var canMove = !removeOnly;
 
-        return key;
-      }));
-    }
-    log(oldList);
-    log(newList);
-  // 先假设节点数组都有key且key不重复
-  // 生成key的下标
-  // { key1: 1, key2: 3, key3: 4}
-    function createKeyToOldIdx (oldList, oldStart, oldEnd) {
-      var map = {};
-      for (var i = oldStart; i <= oldEnd; i++) {
-        var ref$$1 = oldList[i];
-        var key = ref$$1.key;
-        if (isDef(key)) { map[key] = i; }
-      }
-      return map
-    }
-    // 处理节点没有key的情况 没有key直接遍历比较 返回下标 此时时间复杂度变为O(n^2)
-    function findIdxInOld (vnode, list, beginIdx, endIdx) {
-      for (var i = beginIdx; i < endIdx; i++) {
-        var c = list[i];
-        if (isDef(c) && sameVnode(vnode, c)) { return i }
-      }
-    }
-
-    var lastIndex = function (arr) { return arr.length - 1; };
-    var ref$$1 = [0, lastIndex(oldList)];
-    var oldStartIdx = ref$$1[0];
-    var oldEndIdx = ref$$1[1];
-    var ref$1 = [0, lastIndex(newList)];
-    var newStartIdx = ref$1[0];
-    var newEndIdx = ref$1[1];
-  // 两两交叉比较
-    var ref$2 = [newList[newStartIdx], newList[newEndIdx]];
-    var newStartVnode = ref$2[0];
-    var newEndVnode = ref$2[1];
-    var ref$3 = [oldList[oldStartIdx], oldList[oldEndIdx]];
-    var oldStartVnode = ref$3[0];
-    var oldEndVnode = ref$3[1];
-  // 生成老节点 key和下标的映射
-    var oldKeyToIdx;
-  // 循环至其中一个数组遍历完成
-    while (newStartIdx <= newEndIdx && oldStartIdx <= oldEndIdx) {
-    // 处理一些异常 老首或老末不存在 则继续循环
+    while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
       if (isUndef(oldStartVnode)) {
-        oldStartVnode = oldList[++oldStartIdx];
+        oldStartVnode = oldCh[++oldStartIdx]; // Vnode has been moved left
       } else if (isUndef(oldEndVnode)) {
-        oldEndVnode = oldList[--oldEndIdx];
-        // 老首 == 新首 不用移动直接更新
+        oldEndVnode = oldCh[--oldEndIdx];
       } else if (sameVnode(oldStartVnode, newStartVnode)) {
-        patchVnode(oldStartVnode, newStartVnode);
-        newStartVnode = newList[++newStartIdx];
-        oldStartVnode = oldList[++oldStartIdx];
-      // 老末 == 新末 不用移动直接更新
+        patchVnode(oldStartVnode, newStartVnode, insertedVnodeQueue);
+        oldStartVnode = oldCh[++oldStartIdx];
+        newStartVnode = newCh[++newStartIdx];
       } else if (sameVnode(oldEndVnode, newEndVnode)) {
-        patchVnode(oldEndVnode, newEndVnode);
-        newEndVnode = newList[--newEndIdx];
-        oldEndVnode = oldList[--oldEndIdx];
-      // 老首 == 新末
-      } else if (sameVnode(oldStartVnode, newEndVnode)) {
-      // 先执行节点属性更新
-        patchVnode(oldStartVnode, newEndVnode);
-        // 注意：insertBefore、appendChild都是节点移动操作
-        // 把老首移动到oldEndIdx位置;
-        // insert之后没有改变下标
-        // 没有操作vdom
-        // 这里对节点插入操作做了一些封装，1. 同构，要保证两端运行。 2. 简化API，末尾插入使用的其实是appendChild
-        nodeOps.insertBefore(parentElm, oldStartVnode.elm, nodeOps.nextSibling(oldEndVnode.elm));
-      // 这里要移动下标
-        oldStartVnode = oldList[++oldStartIdx];
-        newEndVnode = newList[--newEndIdx];
-      // 老末 == 新首
-      } else if (sameVnode(oldEndVnode, newStartVnode)) {
-        patchVnode(oldEndVnode, newStartVnode);
-      // 把老末移动到oldStartIndex
-        nodeOps.insertBefore(parentElm, oldEndVnode.elm, oldStartVnode.elm);
-        oldEndVnode = oldList[--oldEndIdx];
-        newStartVnode = newList[++newStartIdx];
-
-      // 以上所有情况其实都是对常规场景的优化，就是比如节点增删，时间复杂度都是O(n)
-      // 对于节点交换位置，可能会触发以下算法，就是常规的队列比较移动算法，如果有key时间复杂度也是O(n)，但能做到差异最小化
-      // 54231 => 14532 到53 => 42会进入
-      // 利用了队列的唯一key
+        patchVnode(oldEndVnode, newEndVnode, insertedVnodeQueue);
+        oldEndVnode = oldCh[--oldEndIdx];
+        newEndVnode = newCh[--newEndIdx];
+      } else if (sameVnode(oldStartVnode, newEndVnode)) { // Vnode moved right
+        patchVnode(oldStartVnode, newEndVnode, insertedVnodeQueue);
+        canMove && nodeOps.insertBefore(parentElm, oldStartVnode.elm, nodeOps.nextSibling(oldEndVnode.elm));
+        oldStartVnode = oldCh[++oldStartIdx];
+        newEndVnode = newCh[--newEndIdx];
+      } else if (sameVnode(oldEndVnode, newStartVnode)) { // Vnode moved left
+        patchVnode(oldEndVnode, newStartVnode, insertedVnodeQueue);
+        canMove && nodeOps.insertBefore(parentElm, oldEndVnode.elm, oldStartVnode.elm);
+        oldEndVnode = oldCh[--oldEndIdx];
+        newStartVnode = newCh[++newStartIdx];
       } else {
-      // 映射只生成一次
-        if (isUndef(oldKeyToIdx)) { oldKeyToIdx = createKeyToOldIdx(oldList, oldStartIdx, oldEndIdx); }
-      // 这里假设子节点都有唯一key
-        var idxInOld = isDef(newStartVnode.key)
+        if (isUndef(oldKeyToIdx)) { oldKeyToIdx = createKeyToOldIdx(oldCh, oldStartIdx, oldEndIdx); }
+        idxInOld = isDef(newStartVnode.key)
           ? oldKeyToIdx[newStartVnode.key]
-          : findIdxInOld(newStartVnode, oldList, oldStartIdx, oldEndIdx);
-        if (isUndef(idxInOld)) {
-          // 如果新首在老节点中不存在 进行新增并插入操作
-          // 插入并新增节点
-          createElm(newStartVnode, [], parentElm, oldStartVnode.elm);
+          : findIdxInOld(newStartVnode, oldCh, oldStartIdx, oldEndIdx);
+        if (isUndef(idxInOld)) { // New element
+          createElm(newStartVnode, insertedVnodeQueue, parentElm, oldStartVnode.elm);
         } else {
-        // 否则就是更新操作
-        // 找到需要更新的节点
-          var vnodeToMove = oldList[idxInOld];
-        // 保险起见这里还需要比较一次，防止出现key相同，但节点类型不同情况
+          vnodeToMove = oldCh[idxInOld];
+          /* istanbul ignore if */
+          if ("development" !== 'production' && !vnodeToMove) {
+            warn(
+              'It seems there are duplicate keys that is causing an update error. ' +
+              'Make sure each v-for item has a unique key.'
+            );
+          }
           if (sameVnode(vnodeToMove, newStartVnode)) {
-          // 老规矩先执行属性更新
-            patchVnode(vnodeToMove, newStartVnode);
-            // 这一步很关键 因为节点已经被移动了 置空可以在下次循环时过滤掉 在上面
-            oldList[idxInOld] = undefined;
-            // 再次强调：insertBefore是移动操作
-            nodeOps.insertBefore(parentElm, vnodeToMove.elm, oldStartVnode.elm);
+            patchVnode(vnodeToMove, newStartVnode, insertedVnodeQueue);
+            oldCh[idxInOld] = undefined;
+            canMove && nodeOps.insertBefore(parentElm, vnodeToMove.elm, oldStartVnode.elm);
           } else {
-            // 如果节点key相同 但类型不同 那么相当于插入了新节点
-            // 插入并新增节点
-            createElm(newStartVnode, [], parentElm, oldStartVnode.elm);
+            // same key but different element. treat as new element
+            createElm(newStartVnode, insertedVnodeQueue, parentElm, oldStartVnode.elm);
           }
         }
-      // while(i) {++i} 循环结束时i+=1
-        newStartVnode = newList[++newStartIdx];
+        newStartVnode = newCh[++newStartIdx];
       }
     }
-  // 循环结束时可能出现三种情况: 1. 老节点未遍历完 2. 新节点未遍历完. 3. 全部节点都遍历完成
-  // 为什么不用oldEndIdx > oldStartIdx ? 来判断老节点未遍历完 我觉得都行
     if (oldStartIdx > oldEndIdx) {
-    // 老节点遍历完成 新节点可能还未遍历完成 未完成的直接批量插入到oldStartIdx和oldEndIdx交错的位置
-    // 最典型的场景就是中间连续节点新增的情况
-      var refElm = isUndef(newList[newEndIdx + 1])
-        ? null
-        : newList[newEndIdx + 1].elm;
-    // 这个函数细细一想里面应该涉及到一个VDom的操作 与differ本身无关 所以就直接复用了
-      addVnodes(parentElm, refElm, newList, newStartIdx, newEndIdx, []);
+      refElm = isUndef(newCh[newEndIdx + 1]) ? null : newCh[newEndIdx + 1].elm;
+      addVnodes(parentElm, refElm, newCh, newStartIdx, newEndIdx, insertedVnodeQueue);
     } else if (newStartIdx > newEndIdx) {
-    // 如果新节点先遍历完 则把多的老节点全部删除掉
-    // 最典型的就是批量节点删除情况
-    // 还有一种全部都走else的情况
-      removeVnodes(parentElm, oldList, oldStartIdx, oldEndIdx);
+      removeVnodes(parentElm, oldCh, oldStartIdx, oldEndIdx);
     }
   }
-  // TODO: 源代码
-  // eslint-disable-next-line no-unused-vars
+
+  function findIdxInOld (node, oldCh, start, end) {
+    for (var i = start; i < end; i++) {
+      var c = oldCh[i];
+      if (isDef(c) && sameVnode(node, c)) { return i }
+    }
+  }
+
   function patchVnode (oldVnode, vnode, insertedVnodeQueue, removeOnly) {
     if (oldVnode === vnode) {
       return
@@ -6752,10 +6648,6 @@ function genDefaultModel (
 
 /*  */
 
-// normalize v-model event tokens that can only be determined at runtime.
-// it's important to place the event as the first in the array because
-// the whole point is ensuring the v-model callback gets called before
-// user-attached handlers.
 function normalizeEvents (on) {
   /* istanbul ignore if */
   if (isDef(on[RANGE_TOKEN])) {
@@ -7636,8 +7528,6 @@ var platformModules = [
 
 /*  */
 
-// the directive module should be applied last, after all
-// built-in modules have been applied.
 var modules = platformModules.concat(baseModules);
 
 var patch = createPatchFunction({ nodeOps: nodeOps, modules: modules });
@@ -7647,7 +7537,6 @@ var patch = createPatchFunction({ nodeOps: nodeOps, modules: modules });
  * properties to Elements.
  */
 
-/* istanbul ignore if */
 if (isIE9) {
   // http://www.matts411.com/post/internet-explorer-9-oninput/
   document.addEventListener('selectionchange', function () {
@@ -7777,7 +7666,6 @@ function trigger (el, type) {
 
 /*  */
 
-// recursively search for possible transition defined inside the component root
 function locateNode (vnode) {
   return vnode.componentInstance && (!vnode.data || !vnode.data.transition)
     ? locateNode(vnode.componentInstance._vnode)
@@ -8203,7 +8091,6 @@ var platformComponents = {
 
 /*  */
 
-// install platform specific utils
 Vue$3.config.mustUseProp = mustUseProp;
 Vue$3.config.isReservedTag = isReservedTag;
 Vue$3.config.isReservedAttr = isReservedAttr;
@@ -8253,7 +8140,6 @@ Vue$3.nextTick(function () {
 
 /*  */
 
-// check whether current browser encodes a char inside attribute values
 function shouldDecode (content, encoded) {
   var div = document.createElement('div');
   div.innerHTML = "<div a=\"" + content + "\"/>";
@@ -8435,7 +8321,6 @@ var isNonPhrasingTag = makeMap(
  * http://erik.eae.net/simplehtmlparser/simplehtmlparser.js
  */
 
-// Regular Expressions for parsing tags and attributes
 var attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
 // could use https://www.w3.org/TR/1999/REC-xml-names-19990114/#NT-QName
 // but for Vue templates we can enforce a simple charset
@@ -10193,8 +10078,6 @@ function transformSpecialNewlines (text) {
 
 /*  */
 
-// these keywords should not appear inside expressions, but operators like
-// typeof, instanceof and in are allowed
 var prohibitedKeywordRE = new RegExp('\\b' + (
   'do,if,for,let,new,try,var,case,else,with,await,break,catch,class,const,' +
   'super,throw,while,yield,delete,export,import,return,switch,default,' +
@@ -10443,9 +10326,6 @@ function createCompilerCreator (baseCompile) {
 
 /*  */
 
-// `createCompilerCreator` allows creating compilers that use alternative
-// parser/optimizer/codegen, e.g the SSR optimizing compiler.
-// Here we just export a default compiler using the default parts.
 var createCompiler = createCompilerCreator(function baseCompile (
   template,
   options

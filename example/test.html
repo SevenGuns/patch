@@ -10,12 +10,42 @@
     <div id="app">
       <div v-for="item in list" :key="item.id">{{ item.value }}</div>
       <button @click="onClick">测试</button>
+      <my-test :key="key" :value="key" :test-value="testValue"></my-test>
     </div>
     <script src="./lodash.min.js"></script>
     <script src="./vue.js"></script>
     <script>
       const vm = new Vue({
         el: '#app',
+        components: {
+          'my-test': {
+            template: '<div>{{value}}</div>',
+            beforeMount() {
+              console.warn(`beforeMount: ${this.value}`);
+            },
+            mounted() {
+              console.warn(`mounted: ${this.value}`);
+            },
+            created() {
+              console.warn(`created: ${this.value}`);
+            },
+            updated() {
+              console.warn(`updated: ${this.value}`);
+            },
+            destroyed() {
+              // console.warn(`destroyed`);
+            },
+            watch: {
+              testValue(val) {
+                console.warn(`watched: ${val}`);
+              }
+            },
+            props: {
+              value: null,
+              testValue: null
+            }
+          }
+        },
         data() {
           return {
             list: [
@@ -71,11 +101,14 @@
                 key: 3,
                 value: 't3'
               }
-            ]
+            ],
+            key: _.uniqueId(),
+            testValue: _.uniqueId()
           };
         },
         methods: {
           onClick() {
+            this.key = _.uniqueId('100_');
             this.list = _.shuffle(this.list);
             // 可以用于测试一些特殊情况 调试用
             // this.list = this.list2;
